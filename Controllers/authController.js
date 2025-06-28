@@ -4,6 +4,8 @@ const Teacher = require('../models/Teacher');
 const TPO = require('../models/TPO');
 const CollegeList = require('../models/CollegeList'); // This uses the 'collegelist' collection
 const bcrypt = require('bcryptjs');
+const jwt = require('jsonwebtoken');
+const JWT_SECRET = process.env.JWT_SECRET || 'your_jwt_secret_key';
 
 exports.signup = async (req, res) => {
   try {
@@ -35,7 +37,21 @@ exports.signup = async (req, res) => {
       return res.status(400).json({ error: 'Invalid role' });
     }
     await user.save();
-    res.status(201).json({ message: 'User registered successfully' });
+
+    // Generate JWT and return user info
+    const payload = { id: user._id, role: user.role };
+    const token = jwt.sign(payload, JWT_SECRET, { expiresIn: '7d' });
+
+    res.status(201).json({
+      message: 'User registered successfully',
+      token,
+      user: {
+        name: user.name,
+        prn: user.prn,
+        email: user.email,
+        role: user.role
+      }
+    });
   } catch (err) {
     res.status(400).json({ error: 'Email already exists or invalid data' });
   }
@@ -51,5 +67,19 @@ exports.login = async (req, res) => {
   if (!user) return res.status(400).json({ error: 'Invalid credentials' });
   const isMatch = await bcrypt.compare(password, user.password);
   if (!isMatch) return res.status(400).json({ error: 'Invalid credentials' });
-  res.json({ message: 'Login successful', user });
+
+  // Create JWT payload
+  const payload = { id: user._id, role: user.role };
+  const token = jwt.sign(payload, JWT_SECRET, { expiresIn: '7d' });
+
+  res.json({
+    message: 'Login successful',
+    token,
+    user: {
+      name: user.name,
+      prn: user.prn,
+      email: user.email,
+      role: user.role
+    }
+  });
 };
