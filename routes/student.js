@@ -84,4 +84,30 @@ router.put('/me', auth, async (req, res) => {
   }
 });
 
+// Change password route
+router.post('/me/password', auth, async (req, res) => {
+  try {
+    const { oldPassword, newPassword, confirmPassword } = req.body;
+    if (!oldPassword || !newPassword || !confirmPassword) {
+      return res.status(400).json({ error: 'All password fields are required.' });
+    }
+    if (newPassword !== confirmPassword) {
+      return res.status(400).json({ error: 'New passwords do not match.' });
+    }
+    const student = await Student.findById(req.user.id);
+    if (!student) return res.status(404).json({ error: 'Student not found' });
+    const bcrypt = require('bcryptjs');
+    const isMatch = await bcrypt.compare(oldPassword, student.password);
+    if (!isMatch) {
+      return res.status(400).json({ error: 'Old password is incorrect.' });
+    }
+    const hashed = await bcrypt.hash(newPassword, 10);
+    student.password = hashed;
+    await student.save();
+    res.json({ message: 'Password changed successfully.' });
+  } catch (err) {
+    res.status(500).json({ error: 'Password change failed.' });
+  }
+});
+
 module.exports = router;

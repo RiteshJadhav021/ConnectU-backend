@@ -12,5 +12,7 @@ connectDB();
 // Routes
 app.use('/', require('./routes/auth'));
 app.use('/api/student', require('./routes/student'));
+app.use('/api/alumni', require('./routes/alumni'));
+app.use('/api/alumni/posts', require('./routes/post'));
 
 app.listen(5000, () => console.log('Server running on port 5000'));
