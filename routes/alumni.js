@@ -1,11 +1,61 @@
 const express = require('express');
 const router = express.Router();
 const Alumni = require('../models/Alumni');
+const Post = require('../models/Post');
 const auth = require('../middleware/auth');
 const multer = require('multer');
 const cloudinary = require('../config/cloudinary');
 const streamifier = require('streamifier');
 const upload = multer();
+const uploadPost = multer();
+router.post('/posts', auth, uploadPost.single('image'), async (req, res) => {
+  try {
+    if (req.user.role !== 'alumni') {
+      return res.status(403).json({ error: 'Access denied' });
+    }
+    let imageUrl = '';
+    if (req.file) {
+      // Upload image to Cloudinary
+      const streamUpload = (buffer) => {
+        return new Promise((resolve, reject) => {
+          const stream = cloudinary.uploader.upload_stream(
+            { folder: 'alumni_posts' },
+            (error, result) => {
+              if (result) resolve(result);
+              else reject(error);
+            }
+          );
+          streamifier.createReadStream(buffer).pipe(stream);
+        });
+      };
+      const result = await streamUpload(req.file.buffer);
+      imageUrl = result.secure_url;
+    }
+    const post = new Post({
+      content: req.body.content,
+      image: imageUrl,
+      author: req.user.id,
+      authorModel: 'Alumni',
+      createdAt: new Date(),
+    });
+    await post.save();
+    res.json(post);
+  } catch (err) {
+    console.error('Alumni post creation error:', err);
+    res.status(500).json({ error: 'Failed to create post' });
+  }
+});
+// Get alumni profile by ID (for chat page and other uses)
+// router.get('/:id', async (req, res) => {
+//   try {
+//     const alumni = await Alumni.findById(req.params.id).select('name img email company description');
+//     if (!alumni) return res.status(404).json({ error: 'Alumni not found' });
+//     res.json(alumni);
+//   } catch (err) {
+//     res.status(500).json({ error: 'Server error' });
+//   }
+// });
+// ...existing code...
 
 // Get all alumni profiles (for students to view)
 router.get('/', async (req, res) => {

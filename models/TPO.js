@@ -5,6 +5,10 @@ const tpoSchema = new mongoose.Schema({
   email: { type: String, unique: true },
   password: String,
   role: { type: String, default: 'tpo' },
+  company: { type: String, default: '' },
+  description: { type: String, default: '' },
+  skills: { type: [String], default: [] },
+  img: { type: String, default: '' },
 });
 
 module.exports = mongoose.model('TPO', tpoSchema);

@@ -46,6 +46,7 @@ router.post('/', auth, upload.single('image'), async (req, res) => {
     console.log('Post content:', req.body.content);
     const post = new Post({
       author: alumni._id,
+      authorModel: 'Alumni',
       content: req.body.content,
       image: imageUrl
     });
@@ -81,6 +82,41 @@ router.delete('/:id', auth, async (req, res) => {
     res.json({ success: true });
   } catch (err) {
     res.status(500).json({ error: 'Failed to delete post' });
+  }
+});
+
+// Add a like to a post (one like per user)
+router.post('/:id/like', async (req, res) => {
+  try {
+    const post = await Post.findById(req.params.id);
+    if (!post) return res.status(404).json({ error: 'Post not found' });
+    const userId = req.body.userId;
+    if (!userId) return res.status(400).json({ error: 'userId required' });
+    if (post.likedBy && post.likedBy.includes(userId)) {
+      return res.status(400).json({ error: 'User already liked this post' });
+    }
+    post.likes = (post.likes || 0) + 1;
+    post.likedBy = post.likedBy || [];
+    post.likedBy.push(userId);
+    await post.save();
+    res.json({ likes: post.likes, likedBy: post.likedBy });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to like post' });
+  }
+});
+
+// Add a comment to a post
+router.post('/:id/comment', async (req, res) => {
+  try {
+    const post = await Post.findById(req.params.id);
+    if (!post) return res.status(404).json({ error: 'Post not found' });
+    const { user, text } = req.body;
+    if (!user || !text) return res.status(400).json({ error: 'User and text are required' });
+    post.comments.push({ user, text });
+    await post.save();
+    res.json({ comments: post.comments });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to add comment' });
   }
 });
 

@@ -46,6 +46,7 @@ exports.signup = async (req, res) => {
       message: 'User registered successfully',
       token,
       user: {
+        _id: user._id, // Always include _id for frontend
         name: user.name,
         prn: user.prn,
         email: user.email,
@@ -62,8 +63,7 @@ exports.login = async (req, res) => {
   let user =
     (await Student.findOne({ email })) ||
     (await Alumni.findOne({ email })) ||
-    (await Teacher.findOne({ email })) ||
-    (await TPO.findOne({ email }));
+    (await TPO.findOne({ email })); // Now includes TPO
   if (!user) return res.status(400).json({ error: 'Invalid credentials' });
   const isMatch = await bcrypt.compare(password, user.password);
   if (!isMatch) return res.status(400).json({ error: 'Invalid credentials' });
@@ -76,6 +76,7 @@ exports.login = async (req, res) => {
     message: 'Login successful',
     token,
     user: {
+      _id: user._id, // Always include _id
       name: user.name,
       prn: user.prn,
       email: user.email,

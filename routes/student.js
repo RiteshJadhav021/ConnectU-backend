@@ -18,6 +18,7 @@ router.get('/me', auth, async (req, res) => {
     const student = await Student.findById(req.user.id).select('name prn email role img');
     if (!student) return res.status(404).json({ error: 'Student not found' });
     res.json({
+      _id: student._id, // Always include _id for frontend
       name: student.name,
       prn: student.prn,
       email: student.email,
@@ -107,6 +108,26 @@ router.post('/me/password', auth, async (req, res) => {
     res.json({ message: 'Password changed successfully.' });
   } catch (err) {
     res.status(500).json({ error: 'Password change failed.' });
+  }
+});
+
+// Public: Get student details by ID (for alumni messaging)
+const mongoose = require('mongoose');
+router.get('/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    // Convert to ObjectId if possible
+    let objectId;
+    try {
+      objectId = new mongoose.Types.ObjectId(id);
+    } catch (e) {
+      return res.status(400).json({ error: 'Invalid student ID' });
+    }
+    const student = await Student.findById(objectId).select('name img _id');
+    if (!student) return res.status(404).json({ error: 'Student not found' });
+    res.json({ _id: student._id, name: student.name, img: student.img || '' });
+  } catch (err) {
+    res.status(500).json({ error: 'Server error' });
   }
 });
 
