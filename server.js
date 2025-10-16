@@ -19,6 +19,16 @@ app.use(cors({
 // Connect to MongoDB
 connectDB();
 
+// Root route
+app.get('/', (req, res) => {
+  res.json({ 
+    message: 'ConnectU Backend API is running!',
+    status: 'healthy',
+    timestamp: new Date().toISOString(),
+    environment: process.env.NODE_ENV || 'development'
+  });
+});
+
 // Test route
 app.get('/test', (req, res) => {
   res.json({ message: 'Server is working!' });
@@ -63,4 +73,8 @@ io.on('connection', (socket) => {
 });
 
 const PORT = process.env.PORT || 5000;
-server.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+server.listen(PORT, '0.0.0.0', () => {
+  console.log(`Server running on port ${PORT}`);
+  console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
+  console.log(`MongoDB URI configured: ${process.env.MONGO_URI ? 'Yes' : 'No'}`);
+});
