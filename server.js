@@ -8,9 +8,7 @@ const socketIo = require('socket.io'); // Added for Socket.io
 const app = express();
 app.use(express.json());
 app.use(cors({
-  origin: process.env.NODE_ENV === 'production' 
-    ? ['https://connectu.netlify.app', 'https://your-app-name.netlify.app'] 
-    : '*',
+  origin: '*', // Temporarily allow all origins for testing
   methods: ['GET', 'POST', 'PUT', 'DELETE'],
   credentials: true,  
   allowedHeaders: ['Content-Type', 'Authorization'],
