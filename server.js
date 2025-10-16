@@ -1,3 +1,4 @@
+require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const connectDB = require('./config/db');
@@ -11,9 +12,16 @@ app.use(cors());
 // Connect to MongoDB
 connectDB();
 
+// Test route
+app.get('/test', (req, res) => {
+  res.json({ message: 'Server is working!' });
+});
+
 // Routes
-app.use('/', require('./routes/auth'));
+app.use('/api/auth', require('./routes/auth'));
 app.use('/api/student', require('./routes/student'));
+// Alias for plural path used in frontend
+app.use('/api/students', require('./routes/student'));
 app.use('/api/alumni', require('./routes/alumni'));
 app.use('/api/alumni/posts', require('./routes/post'));
 app.use('/api/connections', require('./routes/connection'));
@@ -42,4 +50,5 @@ io.on('connection', (socket) => {
   });
 });
 
-server.listen(5000, () => console.log('Server running on port 5000'));
+const PORT = process.env.PORT || 5000;
+server.listen(PORT, () => console.log(`Server running on port ${PORT}`));
