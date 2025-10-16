@@ -7,7 +7,14 @@ const socketIo = require('socket.io'); // Added for Socket.io
 
 const app = express();
 app.use(express.json());
-app.use(cors());
+app.use(cors({
+  origin: process.env.NODE_ENV === 'production' 
+    ? ['https://connectu.netlify.app', 'https://your-app-name.netlify.app'] 
+    : '*',
+  methods: ['GET', 'POST', 'PUT', 'DELETE'],
+  credentials: true,  
+  allowedHeaders: ['Content-Type', 'Authorization'],
+}));
 
 // Connect to MongoDB
 connectDB();
@@ -31,7 +38,12 @@ app.use('/api/tpo', require('./routes/tpo')); // New route for TPO
 // --- Socket.io setup ---
 const server = http.createServer(app);
 const io = socketIo(server, {
-  cors: { origin: '*' }
+  cors: { 
+    origin: process.env.NODE_ENV === 'production' 
+      ? ['https://connectu.netlify.app', 'https://your-app-name.netlify.app']
+      : '*',
+    credentials: true
+  }
 });
 
 io.on('connection', (socket) => {
