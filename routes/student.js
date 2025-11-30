@@ -1,6 +1,8 @@
 const express = require('express');
 const router = express.Router();
+const mongoose = require('mongoose');
 const Student = require('../models/Student');
+const Post = require('../models/Post');
 const auth = require('../middleware/auth'); // You need to have an auth middleware that sets req.user
 const cloudinary = require('../config/cloudinary');
 const multer = require('multer');
@@ -112,7 +114,6 @@ router.post('/me/password', auth, async (req, res) => {
 });
 
 // Public: Get student details by ID (for alumni messaging)
-const mongoose = require('mongoose');
 router.get('/:id', async (req, res) => {
   try {
     const { id } = req.params;
@@ -128,6 +129,145 @@ router.get('/:id', async (req, res) => {
     res.json({ _id: student._id, name: student.name, img: student.img || '' });
   } catch (err) {
     res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// Like a post
+router.post('/posts/:postId/like', auth, async (req, res) => {
+  try {
+    // Only allow students
+    if (req.user.role !== 'student') {
+      return res.status(403).json({ error: 'Access denied. Only students can like posts.' });
+    }
+
+    const { postId } = req.params;
+    
+    // Validate postId
+    if (!mongoose.Types.ObjectId.isValid(postId)) {
+      return res.status(400).json({ error: 'Invalid post ID' });
+    }
+
+    const post = await Post.findById(postId);
+    if (!post) {
+      return res.status(404).json({ error: 'Post not found' });
+    }
+
+    const userId = req.user.id;
+    
+    // Check if already liked
+    if (post.likedBy.includes(userId)) {
+      // Unlike: remove from likedBy array and decrement likes
+      post.likedBy = post.likedBy.filter(id => id !== userId);
+      post.likes = Math.max(0, post.likes - 1);
+      await post.save();
+      return res.json({ message: 'Post unliked', likes: post.likes, likedBy: post.likedBy });
+    } else {
+      // Like: add to likedBy array and increment likes
+      post.likedBy.push(userId);
+      post.likes += 1;
+      await post.save();
+      return res.json({ message: 'Post liked', likes: post.likes, likedBy: post.likedBy });
+    }
+  } catch (err) {
+    console.error('Like error:', err);
+    res.status(500).json({ error: 'Failed to like post' });
+  }
+});
+
+// Add comment to a post
+router.post('/posts/:postId/comment', auth, async (req, res) => {
+  try {
+    // Only allow students
+    if (req.user.role !== 'student') {
+      return res.status(403).json({ error: 'Access denied. Only students can comment.' });
+    }
+
+    const { postId } = req.params;
+    const { text } = req.body;
+
+    // Validate postId
+    if (!mongoose.Types.ObjectId.isValid(postId)) {
+      return res.status(400).json({ error: 'Invalid post ID' });
+    }
+
+    // Validate comment text
+    if (!text || typeof text !== 'string' || text.trim().length === 0) {
+      return res.status(400).json({ error: 'Comment text is required' });
+    }
+
+    if (text.trim().length > 500) {
+      return res.status(400).json({ error: 'Comment must be 500 characters or less' });
+    }
+
+    const post = await Post.findById(postId);
+    if (!post) {
+      return res.status(404).json({ error: 'Post not found' });
+    }
+
+    // Get student details
+    const student = await Student.findById(req.user.id).select('name img');
+    if (!student) {
+      return res.status(404).json({ error: 'Student not found' });
+    }
+
+    // Add comment with student info
+    const newComment = {
+      user: student.name,
+      userId: req.user.id,
+      userImg: student.img || '',
+      text: text.trim(),
+      createdAt: new Date()
+    };
+
+    post.comments.push(newComment);
+    await post.save();
+
+    res.json({ 
+      message: 'Comment added', 
+      comment: newComment,
+      totalComments: post.comments.length 
+    });
+  } catch (err) {
+    console.error('Comment error:', err);
+    res.status(500).json({ error: 'Failed to add comment' });
+  }
+});
+
+// Delete a comment (only own comments)
+router.delete('/posts/:postId/comment/:commentId', auth, async (req, res) => {
+  try {
+    if (req.user.role !== 'student') {
+      return res.status(403).json({ error: 'Access denied' });
+    }
+
+    const { postId, commentId } = req.params;
+
+    if (!mongoose.Types.ObjectId.isValid(postId)) {
+      return res.status(400).json({ error: 'Invalid post ID' });
+    }
+
+    const post = await Post.findById(postId);
+    if (!post) {
+      return res.status(404).json({ error: 'Post not found' });
+    }
+
+    const commentIndex = post.comments.findIndex(c => c._id.toString() === commentId);
+    if (commentIndex === -1) {
+      return res.status(404).json({ error: 'Comment not found' });
+    }
+
+    // Check if comment belongs to this user
+    if (post.comments[commentIndex].userId !== req.user.id) {
+      return res.status(403).json({ error: 'You can only delete your own comments' });
+    }
+
+    post.comments.splice(commentIndex, 1);
+    await post.save();
+
+    res.json({ message: 'Comment deleted', totalComments: post.comments.length });
+  } catch (err) {
+    console.error('Delete comment error:', err);
+    res.status(500).json({ error: 'Failed to delete comment' });
   }
 });
 

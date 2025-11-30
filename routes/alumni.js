@@ -30,9 +30,25 @@ router.put('/me', auth, async (req, res) => {
       return res.status(403).json({ error: 'Access denied' });
     }
     const { skills, company, description, img } = req.body;
+    const updateData = {};
+    // Only set provided fields to avoid overwriting existing data with undefined
+    if (typeof company !== 'undefined') updateData.company = company;
+    if (typeof description !== 'undefined') updateData.description = description;
+    if (typeof img !== 'undefined') updateData.img = img;
+    if (typeof skills !== 'undefined') {
+      // Normalize skills: accept array or comma-separated string
+      if (Array.isArray(skills)) {
+        updateData.skills = skills.filter((s) => typeof s === 'string').map((s) => s.trim()).filter(Boolean);
+      } else if (typeof skills === 'string') {
+        updateData.skills = skills
+          .split(',')
+          .map((s) => s.trim())
+          .filter(Boolean);
+      }
+    }
     const alumni = await Alumni.findByIdAndUpdate(
       req.user.id,
-      { skills, company, description, img },
+      { $set: updateData },
       { new: true }
     );
     res.json(alumni);
@@ -138,7 +154,7 @@ router.post('/posts', auth, uploadPost.single('image'), async (req, res) => {
 // Get alumni profile by ID (for chat page and other uses)
 router.get('/:id', async (req, res) => {
   try {
-    const alumni = await Alumni.findById(req.params.id).select('name img email company description');
+    const alumni = await Alumni.findById(req.params.id).select('name img email skills company description');
     if (!alumni) return res.status(404).json({ error: 'Alumni not found' });
     res.json(alumni);
   } catch (err) {

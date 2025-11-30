@@ -28,15 +28,28 @@ exports.signup = async (req, res) => {
     // Validate student against college list if role is student
     if (role === 'student') {
       console.log('Signup attempt:', { name, prn });
+      
+      // Try both field name formats (flexible for database schema variations)
       const exists = await CollegeList.findOne({
-        $and: [
-          { $expr: { $eq: [ { $toLower: { $trim: { input: "$Student Name" } } }, name.trim().toLowerCase() ] } },
-          { $expr: { $eq: [ { $toString: "$PRN" }, prn.trim().toString() ] } }
+        $or: [
+          {
+            $and: [
+              { $expr: { $eq: [ { $toLower: { $trim: { input: "$Student Name" } } }, name.trim().toLowerCase() ] } },
+              { $expr: { $eq: [ { $toString: "$PRN" }, prn.trim().toString() ] } }
+            ]
+          },
+          {
+            $and: [
+              { $expr: { $eq: [ { $toLower: { $trim: { input: "$name" } } }, name.trim().toLowerCase() ] } },
+              { $expr: { $eq: [ { $toString: "$prn" }, prn.trim().toString() ] } }
+            ]
+          }
         ]
       });
+      
       if (!exists) {
         console.log('Not found in collegelist:', { name, prn });
-        return res.status(400).json({ error: 'Name and PRN not found in college list' });
+        return res.status(400).json({ error: 'Name and PRN not found in college list. Please contact admin.' });
       }
     }
 

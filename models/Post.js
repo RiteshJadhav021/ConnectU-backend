@@ -1,7 +1,9 @@
 const mongoose = require('mongoose');
 
 const CommentSchema = new mongoose.Schema({
-  user: { type: String, required: true }, // or ObjectId if you want to reference users
+  user: { type: String, required: true }, // username/name
+  userId: { type: String }, // user ID for ownership verification (optional for backward compatibility)
+  userImg: { type: String, default: '' }, // user profile image
   text: { type: String, required: true },
   createdAt: { type: Date, default: Date.now }
 });
