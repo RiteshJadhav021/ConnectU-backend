@@ -24,18 +24,30 @@ router.get('/received/:alumniId', async (req, res) => {
   const { alumniId } = req.params;
   const requests = await ConnectionRequest.find({ toAlumni: alumniId, status: 'pending' })
     .populate('fromStudent', 'name email img');
-  res.json(requests);
+  // Map to include student details in a flat structure
+  const mapped = requests.map(r => ({
+    _id: r._id,
+    studentId: r.fromStudent?._id,
+    studentName: r.fromStudent?.name || 'Unknown Student',
+    studentImg: r.fromStudent?.img || '',
+    studentEmail: r.fromStudent?.email || '',
+    status: r.status,
+    createdAt: r.createdAt,
+    seenByAlumni: r.seenByAlumni || false
+  }));
+  res.json(mapped);
 });
 
 // Alumni responds to request
 router.post('/respond', async (req, res) => {
-  const { requestId, action } = req.body; // action: 'accepted' or 'rejected'
+  const { requestId, action } = req.body; // action: 'accept' or 'reject'
   const request = await ConnectionRequest.findById(requestId);
   if (!request) return res.status(404).json({ error: 'Request not found' });
-  request.status = action;
-  if (action === 'accepted') request.notifiedStudent = false;
+  // Map action to status
+  request.status = action === 'accept' ? 'accepted' : 'rejected';
+  if (action === 'accept') request.notifiedStudent = false;
   await request.save();
-  res.json({ success: true });
+  res.json({ success: true, request });
 });
 
 // Student fetches accepted connections

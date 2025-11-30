@@ -42,6 +42,7 @@ app.use('/api/alumni/posts', require('./routes/post'));
 app.use('/api/connections', require('./routes/connection'));
 app.use('/api/messages', require('./routes/message')); // New route for messages
 app.use('/api/tpo', require('./routes/tpo')); // New route for TPO
+app.use('/api/qna', require('./routes/qna')); // QnA feature routes
 
 // --- Socket.io setup ---
 const server = http.createServer(app);
